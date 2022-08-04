@@ -1,4 +1,5 @@
 // ignore_for_file: prefer_const_constructors
+import 'dart:isolate';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
@@ -28,17 +29,28 @@ class _WatchAppState extends State<WatchApp> {
       h = 0,
       m = 0,
       s = 0;
+  static int _stopWatchTime = 0;
   String _time = DateFormat("hh:mm:ss a").format(DateTime.now());
-  bool _isVisible = false, _isVisiblePause = false;
+  bool _isVisibleTimer = false, _isVisiblePauseTimer = false;
+  bool _isVisibleStopWatch = true, _isVisiblePauseStopWatch = true;
   String _remainingTime = "";
   String _date = ("Date: " + DateFormat("dd/MM/yyyy").format(DateTime.now()));
+  String stopWatchTimeString = "00:00:00";
+  late Isolate _isolate;
+  String notification = "";
+  late ReceivePort _receivePort;
+  late Capability cap;
+  List<String> lapTime = [];
+  List<String> lapNo = [];
+  List<String> delta = [];
+  int counter = 1;
 
   @override
   void initState() {
     super.initState();
     _time = DateFormat("hh:mm:ss a").format(DateTime.now());
-    _isVisible = false;
-    _isVisiblePause = false;
+    _isVisibleTimer = false;
+    _isVisiblePauseTimer = false;
     _timerClock =
         Timer.periodic(const Duration(milliseconds: 1000), _updateTime);
 
@@ -57,12 +69,12 @@ class _WatchAppState extends State<WatchApp> {
 
   @override
   void dispose() {
+    super.dispose();
     _timerClock.cancel();
     _timerProgressBar.cancel();
     _timerRemainingTime.cancel();
     AwesomeNotifications().actionSink.close();
     AwesomeNotifications().dismissedSink.close();
-    super.dispose();
   }
 
   void onTapped(int index) {
@@ -79,38 +91,38 @@ class _WatchAppState extends State<WatchApp> {
     });
   }
 
-  void _playButton() {
+  void _playButtonTImer() {
     setState(() {
       _timerTime = (_hourValue * 3600 + _minuteValue * 60 + _secondValue);
       _progressTime = _timerTime * 20;
 
       if (_timerTime > 0) {
         FlutterRingtonePlayer.stop();
-        _isVisible = true;
-        _isVisiblePause = false;
+        _isVisibleTimer = true;
+        _isVisiblePauseTimer = false;
         _timerProgressBar = Timer.periodic(
             Duration(milliseconds: _progressTime), _updateProgressBar);
         h = _timerTime ~/ 3600;
         m = ((_timerTime - h * 3600)) ~/ 60;
         s = _timerTime - (h * 3600) - (m * 60);
-        _remainingTime = "$h:$m:$s";
+        _remainingTime = _printDurationHHMMSS(Duration(seconds: _timerTime));
         _timerRemainingTime =
             Timer.periodic(Duration(seconds: 1), _updateRemainingTime);
       }
     });
   }
 
-  void _pauseButton() {
+  void _pauseButtonTImer() {
     setState(() {
-      _isVisiblePause = true;
+      _isVisiblePauseTimer = true;
       _timerProgressBar.cancel();
       _timerRemainingTime.cancel();
     });
   }
 
-  void _playPauseButton() {
+  void _playPauseButtonTimer() {
     setState(() {
-      _isVisiblePause = false;
+      _isVisiblePauseTimer = false;
       _timerProgressBar = Timer.periodic(
           Duration(milliseconds: _progressTime), _updateProgressBar);
       _timerRemainingTime =
@@ -118,9 +130,9 @@ class _WatchAppState extends State<WatchApp> {
     });
   }
 
-  void _stopButton() {
+  void _stopButtonTimer() {
     setState(() {
-      _isVisible = false;
+      _isVisibleTimer = false;
       _timerProgressBar.cancel();
       _timerRemainingTime.cancel();
       _incrementProgressBar = 50;
@@ -144,17 +156,83 @@ class _WatchAppState extends State<WatchApp> {
         h = _timerTime ~/ 3600;
         m = ((_timerTime - h * 3600)) ~/ 60;
         s = _timerTime - (h * 3600) - (m * 60);
-        _remainingTime = "$h:$m:$s";
+        _remainingTime = _printDurationHHMMSS(Duration(seconds: _timerTime));
       });
     } else {
       _timerRemainingTime.cancel();
-      _isVisible = false;
+      _isVisibleTimer = false;
       _timerProgressBar.cancel();
       _incrementProgressBar = 50;
       _remainingTime = "";
       FlutterRingtonePlayer.playAlarm(volume: 1.0);
       createTimerNotifications();
     }
+  }
+
+  void _playButtonStopWatch() async {
+    _isVisibleStopWatch = false;
+    _receivePort = ReceivePort();
+    _isolate = await Isolate.spawn(_checkTimer, _receivePort.sendPort);
+    _receivePort.listen(_handleMessage, onDone: () {
+      print("done!");
+    });
+  }
+
+  static void _checkTimer(SendPort sendPort) async {
+    Timer.periodic(new Duration(milliseconds: 1), (Timer t) {
+      _stopWatchTime++;
+      String msg = _printDurationMMSSmm(Duration(milliseconds: _stopWatchTime));
+      sendPort.send(msg);
+    });
+  }
+
+  void _handleMessage(dynamic data) {
+    setState(() {
+      stopWatchTimeString = data;
+    });
+  }
+
+  void _pauseButtonStopWatch() {
+    _isVisiblePauseStopWatch = false;
+    cap = _isolate.pause(_isolate.pauseCapability);
+  }
+
+  void _playPauseButtonStopWatch() {
+    _isVisiblePauseStopWatch = true;
+    _isolate.resume(cap);
+  }
+
+  void _stopButtonStopWatch() {
+    _isVisibleStopWatch = true;
+    _isVisiblePauseStopWatch = true;
+    setState(() {
+      stopWatchTimeString = '00:00:00';
+      lapTime.clear();
+    });
+    _receivePort.close();
+    _isolate.kill(priority: Isolate.immediate);
+  }
+
+  void _flagButtonStopWatch() {
+    String lapCounter = counter.toString();
+    lapTime.add(stopWatchTimeString);
+    lapNo.add("Lap $lapCounter");
+    counter++;
+  }
+
+  String _printDurationHHMMSS(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+  }
+
+  static String _printDurationMMSSmm(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    String twoDigitMilliseconds =
+        twoDigits(duration.inMilliseconds.remainder(100));
+    return "${twoDigits(duration.inMinutes)}:$twoDigitSeconds:$twoDigitMilliseconds";
   }
 
   @override
@@ -170,9 +248,7 @@ class _WatchAppState extends State<WatchApp> {
         children: [
           widgetClock(),
           widgetTimer(),
-          Container(
-            color: Colors.green,
-          ),
+          widgetStopWatch(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -182,11 +258,11 @@ class _WatchAppState extends State<WatchApp> {
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.timer),
+            icon: Icon(Icons.hourglass_empty_rounded),
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.hourglass_empty),
+            icon: Icon(Icons.timer),
             label: '',
           ),
         ],
@@ -233,7 +309,7 @@ class _WatchAppState extends State<WatchApp> {
                     child: Padding(
                       padding: EdgeInsetsDirectional.only(top: 8.0),
                       child: Container(
-                        height: height * 0.7,
+                        height: height * 0.68,
                         width: width,
                         color: Colors.black,
                         child: MediaQuery.removePadding(
@@ -265,11 +341,6 @@ class _WatchAppState extends State<WatchApp> {
                       ),
                     ),
                   ),
-                  Positioned(
-                      top: height * 0.8,
-                      child: FloatingActionButton(
-                        onPressed: () {},
-                      ))
                 ],
               ),
             ],
@@ -294,7 +365,7 @@ class _WatchAppState extends State<WatchApp> {
               children: [
                 Positioned(
                   child: Visibility(
-                    visible: _isVisible,
+                    visible: _isVisibleTimer,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -341,7 +412,7 @@ class _WatchAppState extends State<WatchApp> {
                       bottom: height * 0.05,
                     ),
                     child: Visibility(
-                      visible: !_isVisible,
+                      visible: !_isVisibleTimer,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -419,12 +490,12 @@ class _WatchAppState extends State<WatchApp> {
                 children: [
                   Positioned(
                     child: Visibility(
-                      visible: !_isVisible,
+                      visible: !_isVisibleTimer,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           ElevatedButton(
-                            onPressed: _playButton,
+                            onPressed: _playButtonTImer,
                             child: Icon(
                               Icons.play_arrow_rounded,
                               size: width * 0.1,
@@ -440,64 +511,235 @@ class _WatchAppState extends State<WatchApp> {
                     ),
                   ),
                   Positioned(
-                      child: Visibility(
-                    visible: _isVisible,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Stack(
-                          children: [
-                            Positioned(
-                              child: Visibility(
-                                visible: !_isVisiblePause,
-                                child: ElevatedButton(
-                                  onPressed: _pauseButton,
-                                  child: Icon(
-                                    Icons.pause,
-                                    size: width * 0.1,
-                                    color: Colors.blue,
+                    child: Visibility(
+                      visible: _isVisibleTimer,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Stack(
+                            children: [
+                              Positioned(
+                                child: Visibility(
+                                  visible: !_isVisiblePauseTimer,
+                                  child: ElevatedButton(
+                                    onPressed: _pauseButtonTImer,
+                                    child: Icon(
+                                      Icons.pause,
+                                      size: width * 0.1,
+                                      color: Colors.blue,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                        shape: CircleBorder(),
+                                        primary:
+                                            Color.fromARGB(255, 44, 44, 44),
+                                        padding: EdgeInsets.all(10)),
                                   ),
-                                  style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(),
-                                      primary: Color.fromARGB(255, 44, 44, 44),
-                                      padding: EdgeInsets.all(10)),
                                 ),
                               ),
-                            ),
-                            Positioned(
-                              child: Visibility(
-                                visible: _isVisiblePause,
-                                child: ElevatedButton(
-                                  onPressed: _playPauseButton,
-                                  child: Icon(
-                                    Icons.play_arrow_rounded,
-                                    size: width * 0.1,
-                                    color: Colors.blue,
+                              Positioned(
+                                child: Visibility(
+                                  visible: _isVisiblePauseTimer,
+                                  child: ElevatedButton(
+                                    onPressed: _playPauseButtonTimer,
+                                    child: Icon(
+                                      Icons.play_arrow_rounded,
+                                      size: width * 0.1,
+                                      color: Colors.blue,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                        shape: CircleBorder(),
+                                        primary:
+                                            Color.fromARGB(255, 44, 44, 44),
+                                        padding: EdgeInsets.all(10)),
                                   ),
-                                  style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(),
-                                      primary: Color.fromARGB(255, 44, 44, 44),
-                                      padding: EdgeInsets.all(10)),
                                 ),
-                              ),
-                            )
-                          ],
-                        ),
-                        ElevatedButton(
-                          onPressed: _stopButton,
-                          child: Icon(
-                            Icons.stop,
-                            size: width * 0.1,
-                            color: Colors.blue,
+                              )
+                            ],
                           ),
-                          style: ElevatedButton.styleFrom(
-                              shape: CircleBorder(),
-                              primary: Color.fromARGB(255, 44, 44, 44),
-                              padding: EdgeInsets.all(10)),
-                        ),
-                      ],
+                          ElevatedButton(
+                            onPressed: _stopButtonTimer,
+                            child: Icon(
+                              Icons.stop,
+                              size: width * 0.1,
+                              color: Colors.blue,
+                            ),
+                            style: ElevatedButton.styleFrom(
+                                shape: CircleBorder(),
+                                primary: Color.fromARGB(255, 44, 44, 44),
+                                padding: EdgeInsets.all(10)),
+                          ),
+                        ],
+                      ),
                     ),
-                  ))
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Scaffold widgetStopWatch() {
+    double height = MediaQuery.of(context).size.height;
+    double width = MediaQuery.of(context).size.width;
+    return Scaffold(
+      body: Container(
+        height: height,
+        width: width,
+        color: Colors.black,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: height * 0.2,
+            ),
+            Text(
+              stopWatchTimeString,
+              style: TextStyle(fontSize: width * 0.14),
+            ),
+            SizedBox(
+                height: height * 0.4,
+                width: width,
+                child: ListView.builder(
+                    itemCount: lapTime.length,
+                    itemBuilder: (context, index) {
+                      int reverseIndex = lapTime.length - 1 - index;
+                      return Card(
+                        color: Colors.black,
+                        elevation: 5,
+                        shadowColor: Colors.white60,
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.flag_rounded,
+                            color: Colors.white60,
+                            size: width * 0.07,
+                          ),
+                          textColor: Colors.white,
+                          title: Text(
+                            lapTime[reverseIndex],
+                            style: TextStyle(fontSize: width * 0.05),
+                          ),
+                          subtitle: Text(
+                            lapNo[reverseIndex],
+                            style: TextStyle(color: Colors.white60),
+                          ),
+                          trailing: Text('+ 00:07:87'),
+                        ),
+                      );
+                    })),
+            Padding(
+              padding: EdgeInsetsDirectional.only(top: height * 0.05),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Stack(
+                    children: [
+                      Positioned(
+                        child: Visibility(
+                          visible: _isVisibleStopWatch,
+                          child: ElevatedButton(
+                            onPressed: _playButtonStopWatch,
+                            child: Icon(
+                              Icons.play_arrow_rounded,
+                              size: width * 0.1,
+                              color: Colors.blue,
+                            ),
+                            style: ElevatedButton.styleFrom(
+                                shape: CircleBorder(),
+                                primary: Color.fromARGB(255, 44, 44, 44),
+                                padding: EdgeInsets.all(10)),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        child: Visibility(
+                          visible: !_isVisibleStopWatch,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Stack(
+                                children: [
+                                  Visibility(
+                                    visible: _isVisiblePauseStopWatch,
+                                    child: ElevatedButton(
+                                      onPressed: _flagButtonStopWatch,
+                                      child: Icon(
+                                        Icons.flag_rounded,
+                                        size: width * 0.1,
+                                        color: Colors.blue,
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(),
+                                          primary:
+                                              Color.fromARGB(255, 44, 44, 44),
+                                          padding: EdgeInsets.all(10)),
+                                    ),
+                                  ),
+                                  Visibility(
+                                    visible: !_isVisiblePauseStopWatch,
+                                    child: ElevatedButton(
+                                      onPressed: _stopButtonStopWatch,
+                                      child: Icon(
+                                        Icons.stop_rounded,
+                                        size: width * 0.1,
+                                        color: Colors.blue,
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(),
+                                          primary:
+                                              Color.fromARGB(255, 44, 44, 44),
+                                          padding: EdgeInsets.all(10)),
+                                    ),
+                                  )
+                                ],
+                              ),
+                              SizedBox(
+                                width: width * 0.2,
+                              ),
+                              Stack(
+                                children: [
+                                  Visibility(
+                                    visible: _isVisiblePauseStopWatch,
+                                    child: ElevatedButton(
+                                      onPressed: _pauseButtonStopWatch,
+                                      child: Icon(
+                                        Icons.pause_rounded,
+                                        size: width * 0.1,
+                                        color: Colors.blue,
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(),
+                                          primary:
+                                              Color.fromARGB(255, 44, 44, 44),
+                                          padding: EdgeInsets.all(10)),
+                                    ),
+                                  ),
+                                  Visibility(
+                                    visible: !_isVisiblePauseStopWatch,
+                                    child: ElevatedButton(
+                                      onPressed: _playPauseButtonStopWatch,
+                                      child: Icon(
+                                        Icons.play_arrow_rounded,
+                                        size: width * 0.1,
+                                        color: Colors.blue,
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(),
+                                          primary:
+                                              Color.fromARGB(255, 44, 44, 44),
+                                          padding: EdgeInsets.all(10)),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
                 ],
               ),
             )
