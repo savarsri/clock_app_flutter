@@ -7,7 +7,9 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:step_progress_indicator/step_progress_indicator.dart';
 import 'package:numberpicker/numberpicker.dart';
+import 'package:watch_app/alarmPage.dart';
 import 'package:watch_app/notifications.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 
 class WatchApp extends StatefulWidget {
   WatchApp({Key? key}) : super(key: key);
@@ -26,9 +28,12 @@ class _WatchAppState extends State<WatchApp> {
       _timerTime = 0,
       _incrementProgressBar = 50,
       _progressTime = 0,
+      _hourValueAlarm = 0,
+      _minuteValueAlarm = 0,
       h = 0,
       m = 0,
-      s = 0;
+      s = 0,
+      counter = 1;
   static int _stopWatchTime = 0;
   String _time = DateFormat("hh:mm:ss a").format(DateTime.now());
   bool _isVisibleTimer = false, _isVisiblePauseTimer = false;
@@ -43,7 +48,14 @@ class _WatchAppState extends State<WatchApp> {
   List<String> lapTime = [];
   List<String> lapNo = [];
   List<String> delta = [];
-  int counter = 1;
+  String selectedValue = "Once";
+  List<DropdownMenuItem<String>> get dropdownItems {
+    List<DropdownMenuItem<String>> menuItems = [
+      DropdownMenuItem(child: Text("Once"), value: "Once"),
+      DropdownMenuItem(child: Text("Daily"), value: "Daily"),
+    ];
+    return menuItems;
+  }
 
   @override
   void initState() {
@@ -83,6 +95,30 @@ class _WatchAppState extends State<WatchApp> {
     });
     pageController.animateToPage(index,
         duration: const Duration(milliseconds: 500), curve: Curves.easeIn);
+  }
+
+  void setAlarm() {
+    print("alarm setted");
+    if (_hourValueAlarm / 12 == 0) {
+      alarmTime.add("$_hourValueAlarm:$_minuteValueAlarm am");
+    } else {
+      int temp = _hourValueAlarm % 12;
+      alarmTime.add("$temp:$_minuteValueAlarm pm");
+    }
+    if (selectedValue == "Once") {
+      alarmID.add(count);
+      AndroidAlarmManager.oneShotAt(
+          DateTime(2022, 8, 13, _hourValueAlarm, _minuteValueAlarm),
+          alarmID[count],
+          fireAlarm);
+      count++;
+    } else {}
+  }
+
+  void deleteAlarm() {}
+
+  void fireAlarm() {
+    print("Alarm fired");
   }
 
   void _updateTime(Timer _) {
@@ -293,7 +329,7 @@ class _WatchAppState extends State<WatchApp> {
               Text(
                 _time,
                 style: TextStyle(
-                  fontSize: width * 0.12,
+                  fontSize: width * 0.10,
                   color: Colors.white,
                 ),
               ),
@@ -303,52 +339,233 @@ class _WatchAppState extends State<WatchApp> {
                   fontSize: width * 0.05,
                 ),
               ),
-              Stack(
-                children: [
-                  Positioned(
-                    child: Padding(
-                      padding: EdgeInsetsDirectional.only(top: 8.0),
-                      child: Container(
-                        height: height * 0.68,
-                        width: width,
-                        color: Colors.black,
-                        child: MediaQuery.removePadding(
-                          context: context,
-                          removeTop: true,
-                          child: ListView.builder(
-                            itemCount: 10,
-                            itemBuilder: ((context, index) {
-                              return Card(
-                                elevation: 4,
-                                color: Color.fromARGB(255, 40, 40, 40),
-                                child: ListTile(
-                                  minVerticalPadding: height * 0.02,
-                                  title: Text(
-                                    '07:40 am',
-                                    style: TextStyle(
-                                      fontSize: height * 0.04,
-                                    ),
-                                  ),
-                                  subtitle:
-                                      Text('Alarm in 9 hours and 5 minutes'),
-                                  trailing: Switch(
-                                      value: true, onChanged: ((value) {})),
-                                ),
-                              );
-                            }),
+              Padding(
+                padding: EdgeInsetsDirectional.only(top: 8.0),
+                child: Container(
+                  height: height * 0.58,
+                  width: width,
+                  color: Colors.black,
+                  child: MediaQuery.removePadding(
+                    context: context,
+                    removeTop: true,
+                    child: ListView.builder(
+                      itemCount: alarmTime.length,
+                      itemBuilder: ((context, index) {
+                        return Card(
+                          elevation: 4,
+                          color: Colors.black,
+                          child: ListTile(
+                            onTap: () {
+                              Navigator.push(
+                                  context,
+                                  PageRouteBuilder(
+                                      opaque: false,
+                                      pageBuilder:
+                                          (BuildContext context, _, __) {
+                                        return alarmPage();
+                                      },
+                                      transitionsBuilder: (___,
+                                          Animation<double> animation,
+                                          ____,
+                                          Widget child) {
+                                        return FadeTransition(
+                                          opacity: animation,
+                                          child: child,
+                                        );
+                                      }));
+                            },
+                            minVerticalPadding: height * 0.02,
+                            title: Text(
+                              alarmTime[index],
+                              style: TextStyle(
+                                fontSize: height * 0.04,
+                              ),
+                            ),
+                            subtitle: Text('Alarm in 9 hours and 5 minutes'),
+                            trailing:
+                                Switch(value: true, onChanged: ((value) {})),
                           ),
-                        ),
-                      ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      _addAlarm(context);
+                      /*Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                              opaque: false,
+                              pageBuilder: (BuildContext context, _, __) {
+                                return alarmPage();
+                              },
+                              transitionsBuilder: (___,
+                                  Animation<double> animation,
+                                  ____,
+                                  Widget child) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: child,
+                                );
+                              }));*/
+                    },
+                    child: Icon(
+                      Icons.add,
+                      size: width * 0.1,
+                      color: Colors.blue,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      shape: CircleBorder(),
+                      primary: Color.fromARGB(255, 44, 44, 44),
+                      padding: EdgeInsets.all(10),
                     ),
                   ),
                 ],
-              ),
+              )
             ],
           ),
         ),
       ),
     );
   }
+
+  /*Scaffold alarmPage() {
+    double height = MediaQuery.of(context).size.height;
+    double width = MediaQuery.of(context).size.width;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        leading: BackButton(),
+        centerTitle: true,
+        title: Text(
+          'Add Alarm',
+          style: TextStyle(),
+        ),
+        actions: <Widget>[
+          IconButton(
+              onPressed: () {
+                setAlarm();
+                Navigator.maybePop(context);
+              },
+              icon: Icon(Icons.check))
+        ],
+      ),
+      body: Container(
+        color: Colors.black,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: height * 0.4,
+              width: width,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  NumberPicker(
+                    value: _hourValueAlarm,
+                    minValue: 00,
+                    maxValue: 23,
+                    haptics: true,
+                    itemHeight: height * 0.1,
+                    infiniteLoop: true,
+                    selectedTextStyle: TextStyle(
+                      fontSize: width * 0.09,
+                      color: Colors.blue,
+                    ),
+                    textStyle: TextStyle(
+                      fontSize: width * 0.07,
+                      color: Colors.white,
+                    ),
+                    onChanged: (value) =>
+                        setState(() => _hourValueAlarm = value),
+                  ),
+                  NumberPicker(
+                    value: _minuteValueAlarm,
+                    minValue: 00,
+                    maxValue: 59,
+                    itemHeight: height * 0.1,
+                    infiniteLoop: true,
+                    selectedTextStyle: TextStyle(
+                      fontSize: width * 0.09,
+                      color: Colors.blue,
+                    ),
+                    textStyle: TextStyle(
+                      fontSize: width * 0.07,
+                      color: Colors.white,
+                    ),
+                    onChanged: (value) =>
+                        setState(() => _minuteValueAlarm = value),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: height * 0.1,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hours',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: width * 0.05),
+                  ),
+                  Text(
+                    'Minutes',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: width * 0.05,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Card(
+              color: Colors.black,
+              child: ListTile(
+                title: Text(
+                  'Repeat',
+                  style: TextStyle(),
+                ),
+                trailing: DropdownButton(
+                    value: selectedValue,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedValue = newValue!;
+                      });
+                    },
+                    items: dropdownItems),
+              ),
+            ),
+            SizedBox(
+              height: height * 0.15,
+              width: width,
+            ),
+            ElevatedButton(
+              onPressed: () {},
+              child: Text(
+                "Delete Alarm",
+                style: TextStyle(color: Colors.red, fontSize: width * 0.045),
+              ),
+              style: ElevatedButton.styleFrom(
+                primary: Color.fromARGB(255, 44, 44, 44),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  */
 
   Scaffold widgetTimer() {
     double height = MediaQuery.of(context).size.height;
@@ -747,5 +964,10 @@ class _WatchAppState extends State<WatchApp> {
         ),
       ),
     );
+  }
+
+  void _addAlarm(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (context) => alarmPage()));
   }
 }
