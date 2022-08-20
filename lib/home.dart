@@ -9,7 +9,6 @@ import 'package:step_progress_indicator/step_progress_indicator.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:watch_app/alarmPage.dart';
 import 'package:watch_app/notifications.dart';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 
 class WatchApp extends StatefulWidget {
   WatchApp({Key? key}) : super(key: key);
@@ -18,45 +17,37 @@ class WatchApp extends StatefulWidget {
   State<WatchApp> createState() => _WatchAppState();
 }
 
-class _WatchAppState extends State<WatchApp> {
-  PageController pageController = PageController();
-  late Timer _timerClock, _timerProgressBar, _timerRemainingTime;
-  int _selectedindex = 0,
-      _hourValue = 0,
-      _minuteValue = 0,
-      _secondValue = 0,
-      _timerTime = 0,
-      _incrementProgressBar = 50,
-      _progressTime = 0,
-      _hourValueAlarm = 0,
-      _minuteValueAlarm = 0,
-      h = 0,
-      m = 0,
-      s = 0,
-      counter = 1;
-  static int _stopWatchTime = 0;
-  String _time = DateFormat("hh:mm:ss a").format(DateTime.now());
-  bool _isVisibleTimer = false, _isVisiblePauseTimer = false;
-  bool _isVisibleStopWatch = true, _isVisiblePauseStopWatch = true;
-  String _remainingTime = "";
-  String _date = ("Date: " + DateFormat("dd/MM/yyyy").format(DateTime.now()));
-  String stopWatchTimeString = "00:00:00";
-  late Isolate _isolate;
-  String notification = "";
-  late ReceivePort _receivePort;
-  late Capability cap;
-  List<String> lapTime = [];
-  List<String> lapNo = [];
-  List<String> delta = [];
-  String selectedValue = "Once";
-  List<DropdownMenuItem<String>> get dropdownItems {
-    List<DropdownMenuItem<String>> menuItems = [
-      DropdownMenuItem(child: Text("Once"), value: "Once"),
-      DropdownMenuItem(child: Text("Daily"), value: "Daily"),
-    ];
-    return menuItems;
-  }
+PageController pageController = PageController();
+late Timer _timerClock, _timerProgressBar, _timerRemainingTime;
+int _selectedindex = 0,
+    _hourValue = 0,
+    _minuteValue = 0,
+    _secondValue = 0,
+    _timerTime = 0,
+    _incrementProgressBar = 50,
+    _progressTime = 0,
+    h = 0,
+    m = 0,
+    s = 0,
+    counter = 1;
 
+String _time = DateFormat("hh:mm:ss a").format(DateTime.now());
+bool _isVisibleTimer = false, _isVisiblePauseTimer = false;
+bool _isVisibleStopWatch = true, _isVisiblePauseStopWatch = true;
+String _remainingTime = "";
+String _date = ("Date: " + DateFormat("dd/MM/yyyy").format(DateTime.now()));
+String stopWatchTimeString = "00:00:00";
+late Isolate _isolate;
+String notification = "";
+late ReceivePort _receivePort;
+late Capability cap;
+List<String> lapTime = [];
+List<String> lapNo = [];
+List<String> delta = [];
+late int selectedAlarmId;
+
+class _WatchAppState extends State<WatchApp> {
+  static int _stopWatchTime = 0;
   @override
   void initState() {
     super.initState();
@@ -95,30 +86,6 @@ class _WatchAppState extends State<WatchApp> {
     });
     pageController.animateToPage(index,
         duration: const Duration(milliseconds: 500), curve: Curves.easeIn);
-  }
-
-  void setAlarm() {
-    print("alarm setted");
-    if (_hourValueAlarm / 12 == 0) {
-      alarmTime.add("$_hourValueAlarm:$_minuteValueAlarm am");
-    } else {
-      int temp = _hourValueAlarm % 12;
-      alarmTime.add("$temp:$_minuteValueAlarm pm");
-    }
-    if (selectedValue == "Once") {
-      alarmID.add(count);
-      AndroidAlarmManager.oneShotAt(
-          DateTime(2022, 8, 13, _hourValueAlarm, _minuteValueAlarm),
-          alarmID[count],
-          fireAlarm);
-      count++;
-    } else {}
-  }
-
-  void deleteAlarm() {}
-
-  void fireAlarm() {
-    print("Alarm fired");
   }
 
   void _updateTime(Timer _) {
@@ -356,23 +323,11 @@ class _WatchAppState extends State<WatchApp> {
                           color: Colors.black,
                           child: ListTile(
                             onTap: () {
-                              Navigator.push(
-                                  context,
-                                  PageRouteBuilder(
-                                      opaque: false,
-                                      pageBuilder:
-                                          (BuildContext context, _, __) {
-                                        return alarmPage();
-                                      },
-                                      transitionsBuilder: (___,
-                                          Animation<double> animation,
-                                          ____,
-                                          Widget child) {
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: child,
-                                        );
-                                      }));
+                              setState(() {
+                                selectedAlarmId = index;
+                                print("ID: $selectedAlarmId");
+                              });
+                              _addAlarm(context);
                             },
                             minVerticalPadding: height * 0.02,
                             title: Text(
@@ -651,6 +606,13 @@ class _WatchAppState extends State<WatchApp> {
                             onChanged: (value) =>
                                 setState(() => _hourValue = value),
                           ),
+                          SizedBox(
+                            height: height * 0.3,
+                            width: width * 0.002,
+                            child: Container(
+                              color: Colors.white38,
+                            ),
+                          ),
                           NumberPicker(
                             value: _minuteValue,
                             minValue: 00,
@@ -667,6 +629,13 @@ class _WatchAppState extends State<WatchApp> {
                             ),
                             onChanged: (value) =>
                                 setState(() => _minuteValue = value),
+                          ),
+                          SizedBox(
+                            height: height * 0.3,
+                            width: width * 0.002,
+                            child: Container(
+                              color: Colors.white38,
+                            ),
                           ),
                           NumberPicker(
                             value: _secondValue,
@@ -967,7 +936,19 @@ class _WatchAppState extends State<WatchApp> {
   }
 
   void _addAlarm(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (context) => alarmPage()));
+    Navigator.push(
+        context,
+        PageRouteBuilder(
+            opaque: false,
+            pageBuilder: (BuildContext context, _, __) {
+              return alarmPage();
+            },
+            transitionsBuilder:
+                (___, Animation<double> animation, ____, Widget child) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            }));
   }
 }

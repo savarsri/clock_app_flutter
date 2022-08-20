@@ -1,6 +1,8 @@
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
+import 'package:watch_app/functions.dart';
+import 'package:watch_app/home.dart';
 
 class alarmPage extends StatefulWidget {
   const alarmPage({key});
@@ -9,9 +11,51 @@ class alarmPage extends StatefulWidget {
   State<alarmPage> createState() => _alarmPageState();
 }
 
-List<String> lapTime = [];
-List<String> lapNo = [];
-List<String> delta = [];
+int getYear(DateTime datetime) {
+  int year;
+  String result, dateTimeNow;
+  dateTimeNow = datetime.toString();
+  result = dateTimeNow.substring(0, 4);
+  year = int.parse(result);
+  return year;
+}
+
+int getMonth(DateTime datetime) {
+  int month;
+  String result, dateTimeNow;
+  dateTimeNow = datetime.toString();
+  result = dateTimeNow.substring(5, 7);
+  month = int.parse(result);
+  return month;
+}
+
+int getDay(DateTime datetime) {
+  int day;
+  String result, dateTimeNow;
+  dateTimeNow = datetime.toString();
+  result = dateTimeNow.substring(8, 10);
+  day = int.parse(result);
+  return day;
+}
+
+int getHour(DateTime datetime) {
+  int hour;
+  String result, dateTimeNow;
+  dateTimeNow = datetime.toString();
+  result = dateTimeNow.substring(11, 13);
+  hour = int.parse(result);
+  return hour;
+}
+
+int getMinute(DateTime datetime) {
+  int minute;
+  String result, dateTimeNow;
+  dateTimeNow = datetime.toString();
+  result = dateTimeNow.substring(14, 16);
+  minute = int.parse(result);
+  return minute;
+}
+
 String selectedValue = "Once";
 List<DropdownMenuItem<String>> get dropdownItems {
   List<DropdownMenuItem<String>> menuItems = [
@@ -23,34 +67,56 @@ List<DropdownMenuItem<String>> get dropdownItems {
 
 List<int> alarmID = [];
 List<String> alarmTime = [];
-int count = 0;
-int _hourValueAlarm = 0, _minuteValueAlarm = 0;
-
-void setAlarm() {
-  print("alarm setted");
-  if (_hourValueAlarm / 12 == 0) {
-    alarmTime.add("$_hourValueAlarm:$_minuteValueAlarm am");
-  } else {
-    int temp = _hourValueAlarm % 12;
-    alarmTime.add("$temp:$_minuteValueAlarm pm");
-  }
-  if (selectedValue == "Once") {
-    alarmID.add(count);
-    AndroidAlarmManager.oneShotAt(
-        DateTime(2022, 8, 13, _hourValueAlarm, _minuteValueAlarm),
-        alarmID[count],
-        fireAlarm);
-    count++;
-  } else {}
-}
-
-void deleteAlarm() {}
-
-void fireAlarm() {
-  print("Alarm fired");
-}
+int _hourValueAlarm = 0, _minuteValueAlarm = 0, count = 0;
 
 class _alarmPageState extends State<alarmPage> {
+  @override
+  void initState() {
+    super.initState();
+    _hourValueAlarm = getHour(DateTime.now());
+    _minuteValueAlarm = getMinute(DateTime.now());
+  }
+
+  void setAlarm() {
+    if (_hourValueAlarm >= getHour(DateTime.now())) {
+      if (_minuteValueAlarm >= getMinute(DateTime.now())) {
+        alarmID.add(count);
+        AndroidAlarmManager.oneShotAt(
+            DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
+                getDay(DateTime.now()), _hourValueAlarm, _minuteValueAlarm),
+            alarmID[count],
+            fireAlarm);
+        print(getYear(DateTime.now()));
+        print(getMonth(DateTime.now()));
+        print(getDay(DateTime.now()));
+        print("alarm setted");
+      }
+    }
+    if (_hourValueAlarm / 12 == 0) {
+      alarmTime.add("$_hourValueAlarm:$_minuteValueAlarm am");
+    } else {
+      int temp = _hourValueAlarm % 12;
+      alarmTime.add("$temp:$_minuteValueAlarm pm");
+    }
+    count++;
+  }
+
+  void deleteAlarm() {
+    alarmID.removeAt(selectedAlarmId);
+    alarmTime.removeAt(selectedAlarmId);
+    count--;
+  }
+
+  void fireAlarm() {
+    print("Alarm fired");
+  }
+
+  String _printDurationHHMM(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    return "${twoDigits(duration.inHours)}:$twoDigitMinutes";
+  }
+
   @override
   Widget build(BuildContext context) {
     double height = MediaQuery.of(context).size.height;
@@ -166,7 +232,10 @@ class _alarmPageState extends State<alarmPage> {
               width: width,
             ),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                deleteAlarm();
+                Navigator.maybePop(context);
+              },
               child: Text(
                 "Delete Alarm",
                 style: TextStyle(color: Colors.red, fontSize: width * 0.045),
