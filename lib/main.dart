@@ -4,6 +4,7 @@ import 'package:watch_app/home.dart';
 import 'package:flutter/services.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   notificationInit();
   runApp(const MyApp());
 }
@@ -45,7 +46,7 @@ class MyApp extends StatelessWidget {
       DeviceOrientation.portraitDown,
     ]);
     return MaterialApp(
-      title: "Watch",
+      title: "Clock",
       theme: ThemeData.dark(),
       debugShowCheckedModeBanner: false,
       home: WatchApp(),

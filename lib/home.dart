@@ -1,6 +1,5 @@
 // ignore_for_file: prefer_const_constructors
 import 'dart:isolate';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
@@ -64,12 +63,17 @@ class _WatchAppState extends State<WatchApp> {
         Timer.periodic(const Duration(milliseconds: 1000), _updateTime);
 
     AwesomeNotifications().actionStream.listen((event) {
+      print("stop");
+      stopRingtone();
+      FlutterRingtonePlayer.stop();
       setState(() {
         FlutterRingtonePlayer.stop();
       });
     });
 
     AwesomeNotifications().dismissedStream.listen(((event) {
+      print("Stop");
+      stopRingtone();
       setState(() {
         FlutterRingtonePlayer.stop();
       });

@@ -1,7 +1,4 @@
-import 'dart:async';
-
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-import 'package:awesome_notifications/src/models/received_models/received_action.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:numberpicker/numberpicker.dart';
@@ -306,6 +303,10 @@ class _alarmPageState extends State<alarmPage> {
 void fireAlarm() {
   createAlarmNotifications();
   print("Alarm fired");
+}
+
+void stopRingtone() {
+  FlutterRingtonePlayer.stop();
 }
 
 void stopAlarm() {
