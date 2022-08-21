@@ -1,5 +1,6 @@
 // ignore_for_file: prefer_const_constructors
 import 'dart:isolate';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
@@ -33,7 +34,10 @@ int _selectedindex = 0,
 
 String _time = DateFormat("hh:mm:ss a").format(DateTime.now());
 bool _isVisibleTimer = false, _isVisiblePauseTimer = false;
-bool _isVisibleStopWatch = true, _isVisiblePauseStopWatch = true;
+bool _isVisibleStopWatch = true,
+    _isVisiblePauseStopWatch = true,
+    switchBool = true,
+    onTapBool = false;
 String _remainingTime = "";
 String _date = ("Date: " + DateFormat("dd/MM/yyyy").format(DateTime.now()));
 String stopWatchTimeString = "00:00:00";
@@ -44,6 +48,8 @@ late Capability cap;
 List<String> lapTime = [];
 List<String> lapNo = [];
 List<String> delta = [];
+List<int> stopWatchTimeList = [];
+List<bool> onOffSwitch = [];
 late int selectedAlarmId;
 
 class _WatchAppState extends State<WatchApp> {
@@ -218,6 +224,17 @@ class _WatchAppState extends State<WatchApp> {
 
   void _flagButtonStopWatch() {
     String lapCounter = counter.toString();
+    print(_stopWatchTime);
+    stopWatchTimeList.add(_stopWatchTime);
+    print(stopWatchTimeList[0]);
+    if (counter == 1) {
+      delta.add(
+          _printDurationMMSSmm(Duration(milliseconds: stopWatchTimeList[0])));
+    } else {
+      delta.add(_printDurationMMSSmm(Duration(
+          milliseconds: stopWatchTimeList[counter - 1] -
+              stopWatchTimeList[counter - 2])));
+    }
     lapTime.add(stopWatchTimeString);
     lapNo.add("Lap $lapCounter");
     counter++;
@@ -318,13 +335,17 @@ class _WatchAppState extends State<WatchApp> {
                     child: ListView.builder(
                       itemCount: alarmTime.length,
                       itemBuilder: ((context, index) {
+                        selectedAlarmId = index;
                         return Card(
                           elevation: 4,
                           color: Colors.black,
+                          shadowColor: Colors.white38,
                           child: ListTile(
                             onTap: () {
                               setState(() {
                                 selectedAlarmId = index;
+                                hourValueAlarm = alarmHour[selectedAlarmId];
+                                minuteValueAlarm = alarmMinute[selectedAlarmId];
                                 print("ID: $selectedAlarmId");
                               });
                               _addAlarm(context);
@@ -336,9 +357,21 @@ class _WatchAppState extends State<WatchApp> {
                                 fontSize: height * 0.04,
                               ),
                             ),
-                            subtitle: Text('Alarm in 9 hours and 5 minutes'),
-                            trailing:
-                                Switch(value: true, onChanged: ((value) {})),
+                            trailing: Switch(
+                                value: switchBool,
+                                onChanged: ((value) {
+                                  if (switchBool == true) {
+                                    stopAlarm();
+                                    switchBool = false;
+                                  } else {
+                                    selectedAlarmId = index;
+                                    hourValueAlarm = alarmHour[selectedAlarmId];
+                                    minuteValueAlarm =
+                                        alarmMinute[selectedAlarmId];
+                                    activateAlarm();
+                                    switchBool = true;
+                                  }
+                                })),
                           ),
                         );
                       }),
@@ -352,23 +385,9 @@ class _WatchAppState extends State<WatchApp> {
                 children: [
                   ElevatedButton(
                     onPressed: () {
+                      hourValueAlarm = getHour(DateTime.now());
+                      minuteValueAlarm = getMinute(DateTime.now());
                       _addAlarm(context);
-                      /*Navigator.push(
-                          context,
-                          PageRouteBuilder(
-                              opaque: false,
-                              pageBuilder: (BuildContext context, _, __) {
-                                return alarmPage();
-                              },
-                              transitionsBuilder: (___,
-                                  Animation<double> animation,
-                                  ____,
-                                  Widget child) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: child,
-                                );
-                              }));*/
                     },
                     child: Icon(
                       Icons.add,
@@ -389,138 +408,6 @@ class _WatchAppState extends State<WatchApp> {
       ),
     );
   }
-
-  /*Scaffold alarmPage() {
-    double height = MediaQuery.of(context).size.height;
-    double width = MediaQuery.of(context).size.width;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        leading: BackButton(),
-        centerTitle: true,
-        title: Text(
-          'Add Alarm',
-          style: TextStyle(),
-        ),
-        actions: <Widget>[
-          IconButton(
-              onPressed: () {
-                setAlarm();
-                Navigator.maybePop(context);
-              },
-              icon: Icon(Icons.check))
-        ],
-      ),
-      body: Container(
-        color: Colors.black,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: height * 0.4,
-              width: width,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  NumberPicker(
-                    value: _hourValueAlarm,
-                    minValue: 00,
-                    maxValue: 23,
-                    haptics: true,
-                    itemHeight: height * 0.1,
-                    infiniteLoop: true,
-                    selectedTextStyle: TextStyle(
-                      fontSize: width * 0.09,
-                      color: Colors.blue,
-                    ),
-                    textStyle: TextStyle(
-                      fontSize: width * 0.07,
-                      color: Colors.white,
-                    ),
-                    onChanged: (value) =>
-                        setState(() => _hourValueAlarm = value),
-                  ),
-                  NumberPicker(
-                    value: _minuteValueAlarm,
-                    minValue: 00,
-                    maxValue: 59,
-                    itemHeight: height * 0.1,
-                    infiniteLoop: true,
-                    selectedTextStyle: TextStyle(
-                      fontSize: width * 0.09,
-                      color: Colors.blue,
-                    ),
-                    textStyle: TextStyle(
-                      fontSize: width * 0.07,
-                      color: Colors.white,
-                    ),
-                    onChanged: (value) =>
-                        setState(() => _minuteValueAlarm = value),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: height * 0.1,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hours',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: width * 0.05),
-                  ),
-                  Text(
-                    'Minutes',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: width * 0.05,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Card(
-              color: Colors.black,
-              child: ListTile(
-                title: Text(
-                  'Repeat',
-                  style: TextStyle(),
-                ),
-                trailing: DropdownButton(
-                    value: selectedValue,
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        selectedValue = newValue!;
-                      });
-                    },
-                    items: dropdownItems),
-              ),
-            ),
-            SizedBox(
-              height: height * 0.15,
-              width: width,
-            ),
-            ElevatedButton(
-              onPressed: () {},
-              child: Text(
-                "Delete Alarm",
-                style: TextStyle(color: Colors.red, fontSize: width * 0.045),
-              ),
-              style: ElevatedButton.styleFrom(
-                primary: Color.fromARGB(255, 44, 44, 44),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  */
 
   Scaffold widgetTimer() {
     double height = MediaQuery.of(context).size.height;
@@ -811,7 +698,6 @@ class _WatchAppState extends State<WatchApp> {
                             lapNo[reverseIndex],
                             style: TextStyle(color: Colors.white60),
                           ),
-                          trailing: Text('+ 00:07:87'),
                         ),
                       );
                     })),

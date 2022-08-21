@@ -1,11 +1,15 @@
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:watch_app/home.dart';
 import 'package:flutter/services.dart';
 
 void main() async {
-  AwesomeNotifications().initialize(null, [
+  notificationInit();
+  runApp(const MyApp());
+}
+
+void notificationInit() async {
+  await AwesomeNotifications().initialize(null, [
     NotificationChannel(
       channelKey: 'Timer Notification',
       channelName: 'Timer Notifications',
@@ -17,8 +21,18 @@ void main() async {
       defaultColor: Color.fromARGB(255, 44, 44, 44),
     )
   ]);
-  await AndroidAlarmManager.initialize();
-  runApp(const MyApp());
+  await AwesomeNotifications().initialize(null, [
+    NotificationChannel(
+      channelKey: 'Alarm Notification',
+      channelName: 'Alarm Notifications',
+      channelDescription: '',
+      enableVibration: true,
+      importance: NotificationImportance.Max,
+      playSound: false,
+      channelShowBadge: true,
+      defaultColor: Color.fromARGB(255, 44, 44, 44),
+    )
+  ]);
 }
 
 class MyApp extends StatelessWidget {

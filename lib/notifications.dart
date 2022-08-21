@@ -7,6 +7,7 @@ Future<void> createTimerNotifications() async {
         id: 1,
         channelKey: 'Timer Notification',
         title: "Time's up",
+        wakeUpScreen: true,
       ),
       actionButtons: [
         NotificationActionButton(
@@ -17,6 +18,19 @@ Future<void> createTimerNotifications() async {
       ]);
 }
 
-int uniqueNotificationId() {
-  return DateTime.now().microsecondsSinceEpoch;
+Future<void> createAlarmNotifications() async {
+  await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 2,
+        channelKey: 'Alarm Notification',
+        title: "Alarm",
+        wakeUpScreen: true,
+      ),
+      actionButtons: [
+        NotificationActionButton(
+          key: 'stop',
+          label: 'Stop',
+          color: Colors.blueAccent,
+        ),
+      ]);
 }

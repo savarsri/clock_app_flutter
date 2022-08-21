@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:awesome_notifications/src/models/received_models/received_action.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:numberpicker/numberpicker.dart';
-import 'package:watch_app/functions.dart';
 import 'package:watch_app/home.dart';
+import 'notifications.dart';
 
 class alarmPage extends StatefulWidget {
   const alarmPage({key});
@@ -66,55 +70,88 @@ List<DropdownMenuItem<String>> get dropdownItems {
 }
 
 List<int> alarmID = [];
+List<int> alarmHour = [];
+List<int> alarmMinute = [];
 List<String> alarmTime = [];
-int _hourValueAlarm = 0, _minuteValueAlarm = 0, count = 0;
+int hourValueAlarm = 0, minuteValueAlarm = 0, count = 0;
+
+set sethourValueAlarm(int value) {
+  hourValueAlarm = value;
+}
+
+set setminuteValueAlarm(int value) {
+  minuteValueAlarm = value;
+}
 
 class _alarmPageState extends State<alarmPage> {
-  @override
-  void initState() {
-    super.initState();
-    _hourValueAlarm = getHour(DateTime.now());
-    _minuteValueAlarm = getMinute(DateTime.now());
-  }
-
   void setAlarm() {
-    if (_hourValueAlarm >= getHour(DateTime.now())) {
-      if (_minuteValueAlarm >= getMinute(DateTime.now())) {
+    int tempTime = hourValueAlarm * 60 * 60 + minuteValueAlarm * 60;
+    if (hourValueAlarm / 12 < 1) {
+      alarmTime.add(_printDurationHHMM(Duration(seconds: tempTime)) + " am");
+    } else {
+      alarmTime.add(_printDurationHHMM(Duration(seconds: tempTime)) + " pm");
+    }
+    if (hourValueAlarm >= getHour(DateTime.now())) {
+      if (minuteValueAlarm > getMinute(DateTime.now())) {
         alarmID.add(count);
+        alarmHour.add(hourValueAlarm);
+        alarmMinute.add(minuteValueAlarm);
         AndroidAlarmManager.oneShotAt(
             DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
-                getDay(DateTime.now()), _hourValueAlarm, _minuteValueAlarm),
+                getDay(DateTime.now()), hourValueAlarm, minuteValueAlarm),
             alarmID[count],
-            fireAlarm);
-        print(getYear(DateTime.now()));
-        print(getMonth(DateTime.now()));
-        print(getDay(DateTime.now()));
+            fireAlarm,
+            wakeup: true,
+            allowWhileIdle: true,
+            rescheduleOnReboot: true);
+        print("alarm setted");
+      } else {
+        alarmID.add(count);
+        alarmHour.add(hourValueAlarm);
+        alarmMinute.add(minuteValueAlarm);
+        AndroidAlarmManager.oneShotAt(
+            DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
+                getDay(DateTime.now()) + 1, hourValueAlarm, minuteValueAlarm),
+            alarmID[count],
+            fireAlarm,
+            wakeup: true,
+            allowWhileIdle: true,
+            rescheduleOnReboot: true);
         print("alarm setted");
       }
-    }
-    if (_hourValueAlarm / 12 == 0) {
-      alarmTime.add("$_hourValueAlarm:$_minuteValueAlarm am");
     } else {
-      int temp = _hourValueAlarm % 12;
-      alarmTime.add("$temp:$_minuteValueAlarm pm");
+      alarmID.add(count);
+      alarmHour.add(hourValueAlarm);
+      alarmMinute.add(minuteValueAlarm);
+      AndroidAlarmManager.oneShotAt(
+          DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
+              getDay(DateTime.now()) + 1, hourValueAlarm, minuteValueAlarm),
+          alarmID[count],
+          fireAlarm,
+          wakeup: true,
+          allowWhileIdle: true,
+          rescheduleOnReboot: true);
+      print("alarm setted");
     }
+    print(alarmID[count]);
     count++;
   }
 
   void deleteAlarm() {
-    alarmID.removeAt(selectedAlarmId);
     alarmTime.removeAt(selectedAlarmId);
+    AndroidAlarmManager.cancel(alarmID[selectedAlarmId]);
+    alarmID.removeAt(selectedAlarmId);
     count--;
-  }
-
-  void fireAlarm() {
-    print("Alarm fired");
   }
 
   String _printDurationHHMM(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    return "${twoDigits(duration.inHours)}:$twoDigitMinutes";
+    if (int.parse(twoDigits(duration.inHours)) / 12 >= 0) {
+      return "${(int.parse(twoDigits(duration.inHours)) % 12).toString()}:$twoDigitMinutes";
+    } else {
+      return "${twoDigits(duration.inHours)}:$twoDigitMinutes";
+    }
   }
 
   @override
@@ -152,7 +189,7 @@ class _alarmPageState extends State<alarmPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   NumberPicker(
-                    value: _hourValueAlarm,
+                    value: hourValueAlarm,
                     minValue: 00,
                     maxValue: 23,
                     haptics: true,
@@ -167,10 +204,10 @@ class _alarmPageState extends State<alarmPage> {
                       color: Colors.white,
                     ),
                     onChanged: (value) =>
-                        setState(() => _hourValueAlarm = value),
+                        setState(() => hourValueAlarm = value),
                   ),
                   NumberPicker(
-                    value: _minuteValueAlarm,
+                    value: minuteValueAlarm,
                     minValue: 00,
                     maxValue: 59,
                     itemHeight: height * 0.1,
@@ -184,7 +221,7 @@ class _alarmPageState extends State<alarmPage> {
                       color: Colors.white,
                     ),
                     onChanged: (value) =>
-                        setState(() => _minuteValueAlarm = value),
+                        setState(() => minuteValueAlarm = value),
                   ),
                 ],
               ),
@@ -234,7 +271,20 @@ class _alarmPageState extends State<alarmPage> {
             ElevatedButton(
               onPressed: () {
                 deleteAlarm();
-                Navigator.maybePop(context);
+                Navigator.maybePop(
+                    context,
+                    PageRouteBuilder(
+                        opaque: false,
+                        pageBuilder: (BuildContext context, _, __) {
+                          return alarmPage();
+                        },
+                        transitionsBuilder: (___, Animation<double> animation,
+                            ____, Widget child) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        }));
               },
               child: Text(
                 "Delete Alarm",
@@ -250,5 +300,59 @@ class _alarmPageState extends State<alarmPage> {
         ),
       ),
     );
+  }
+}
+
+void fireAlarm() {
+  createAlarmNotifications();
+  print("Alarm fired");
+}
+
+void stopAlarm() {
+  AndroidAlarmManager.cancel(alarmID[selectedAlarmId]);
+}
+
+void activateAlarm() {
+  if (hourValueAlarm >= getHour(DateTime.now())) {
+    if (minuteValueAlarm > getMinute(DateTime.now())) {
+      alarmID.add(count);
+      alarmHour.add(hourValueAlarm);
+      alarmMinute.add(minuteValueAlarm);
+      AndroidAlarmManager.oneShotAt(
+          DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
+              getDay(DateTime.now()), hourValueAlarm, minuteValueAlarm),
+          alarmID[count],
+          fireAlarm,
+          wakeup: true,
+          allowWhileIdle: true,
+          rescheduleOnReboot: true);
+      print("alarm setted");
+    } else {
+      alarmID.add(count);
+      alarmHour.add(hourValueAlarm);
+      alarmMinute.add(minuteValueAlarm);
+      AndroidAlarmManager.oneShotAt(
+          DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
+              getDay(DateTime.now()) + 1, hourValueAlarm, minuteValueAlarm),
+          alarmID[count],
+          fireAlarm,
+          wakeup: true,
+          allowWhileIdle: true,
+          rescheduleOnReboot: true);
+      print("alarm setted");
+    }
+  } else {
+    alarmID.add(count);
+    alarmHour.add(hourValueAlarm);
+    alarmMinute.add(minuteValueAlarm);
+    AndroidAlarmManager.oneShotAt(
+        DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
+            getDay(DateTime.now()) + 1, hourValueAlarm, minuteValueAlarm),
+        alarmID[count],
+        fireAlarm,
+        wakeup: true,
+        allowWhileIdle: true,
+        rescheduleOnReboot: true);
+    print("alarm setted");
   }
 }
