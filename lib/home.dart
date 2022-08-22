@@ -7,14 +7,15 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:step_progress_indicator/step_progress_indicator.dart';
 import 'package:numberpicker/numberpicker.dart';
-import 'package:watch_app/alarmPage.dart';
-import 'package:watch_app/notifications.dart';
+import 'package:watch_app/Functions/functions.dart';
+import 'package:watch_app/Functions/notifications.dart';
+import 'package:watch_app/Views/alarmPage.dart';
 
 class WatchApp extends StatefulWidget {
   WatchApp({Key? key}) : super(key: key);
 
   @override
-  State<WatchApp> createState() => _WatchAppState();
+  State<WatchApp> createState() => WatchAppState();
 }
 
 PageController pageController = PageController();
@@ -51,7 +52,7 @@ List<int> stopWatchTimeList = [];
 List<bool> onOffSwitch = [];
 late int selectedAlarmId;
 
-class _WatchAppState extends State<WatchApp> {
+class WatchAppState extends State<WatchApp> {
   static int _stopWatchTime = 0;
   @override
   void initState() {
@@ -65,7 +66,6 @@ class _WatchAppState extends State<WatchApp> {
     AwesomeNotifications().actionStream.listen((event) {
       print("stop");
       stopRingtone();
-      FlutterRingtonePlayer.stop();
       setState(() {
         FlutterRingtonePlayer.stop();
       });
@@ -88,6 +88,19 @@ class _WatchAppState extends State<WatchApp> {
     _timerRemainingTime.cancel();
     AwesomeNotifications().actionSink.close();
     AwesomeNotifications().dismissedSink.close();
+  }
+
+  void startRingtone() {
+    FlutterRingtonePlayer.playAlarm(volume: 1.0);
+    print("hello");
+  }
+
+  void stopRingtone() {
+    print("Called stop ringtone");
+    setState(() {
+      FlutterRingtonePlayer.stop();
+    });
+    print("Called stop ringtone 2");
   }
 
   void onTapped(int index) {
@@ -372,7 +385,7 @@ class _WatchAppState extends State<WatchApp> {
                                     hourValueAlarm = alarmHour[selectedAlarmId];
                                     minuteValueAlarm =
                                         alarmMinute[selectedAlarmId];
-                                    activateAlarm();
+                                    //activateAlarm();
                                     switchBool = true;
                                   }
                                 })),
@@ -389,8 +402,8 @@ class _WatchAppState extends State<WatchApp> {
                 children: [
                   ElevatedButton(
                     onPressed: () {
-                      hourValueAlarm = getHour(DateTime.now());
-                      minuteValueAlarm = getMinute(DateTime.now());
+                      hourValueAlarm = functions().getHour(DateTime.now());
+                      minuteValueAlarm = functions().getMinute(DateTime.now());
                       _addAlarm(context);
                     },
                     child: Icon(

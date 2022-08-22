@@ -1,60 +1,15 @@
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:numberpicker/numberpicker.dart';
+import 'package:watch_app/Functions/functions.dart';
+import 'package:watch_app/Functions/notifications.dart';
 import 'package:watch_app/home.dart';
-import 'notifications.dart';
 
 class alarmPage extends StatefulWidget {
   const alarmPage({key});
 
   @override
-  State<alarmPage> createState() => _alarmPageState();
-}
-
-int getYear(DateTime datetime) {
-  int year;
-  String result, dateTimeNow;
-  dateTimeNow = datetime.toString();
-  result = dateTimeNow.substring(0, 4);
-  year = int.parse(result);
-  return year;
-}
-
-int getMonth(DateTime datetime) {
-  int month;
-  String result, dateTimeNow;
-  dateTimeNow = datetime.toString();
-  result = dateTimeNow.substring(5, 7);
-  month = int.parse(result);
-  return month;
-}
-
-int getDay(DateTime datetime) {
-  int day;
-  String result, dateTimeNow;
-  dateTimeNow = datetime.toString();
-  result = dateTimeNow.substring(8, 10);
-  day = int.parse(result);
-  return day;
-}
-
-int getHour(DateTime datetime) {
-  int hour;
-  String result, dateTimeNow;
-  dateTimeNow = datetime.toString();
-  result = dateTimeNow.substring(11, 13);
-  hour = int.parse(result);
-  return hour;
-}
-
-int getMinute(DateTime datetime) {
-  int minute;
-  String result, dateTimeNow;
-  dateTimeNow = datetime.toString();
-  result = dateTimeNow.substring(14, 16);
-  minute = int.parse(result);
-  return minute;
+  State<alarmPage> createState() => alarmPageState();
 }
 
 String selectedValue = "Once";
@@ -80,7 +35,7 @@ set setminuteValueAlarm(int value) {
   minuteValueAlarm = value;
 }
 
-class _alarmPageState extends State<alarmPage> {
+class alarmPageState extends State<alarmPage> {
   void setAlarm() {
     int tempTime = hourValueAlarm * 60 * 60 + minuteValueAlarm * 60;
     if (hourValueAlarm / 12 < 1) {
@@ -88,14 +43,18 @@ class _alarmPageState extends State<alarmPage> {
     } else {
       alarmTime.add(_printDurationHHMM(Duration(seconds: tempTime)) + " pm");
     }
-    if (hourValueAlarm >= getHour(DateTime.now())) {
-      if (minuteValueAlarm > getMinute(DateTime.now())) {
+    if (hourValueAlarm >= functions().getHour(DateTime.now())) {
+      if (minuteValueAlarm > functions().getMinute(DateTime.now())) {
         alarmID.add(count);
         alarmHour.add(hourValueAlarm);
         alarmMinute.add(minuteValueAlarm);
         AndroidAlarmManager.oneShotAt(
-            DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
-                getDay(DateTime.now()), hourValueAlarm, minuteValueAlarm),
+            DateTime(
+                functions().getYear(DateTime.now()),
+                functions().getMonth(DateTime.now()),
+                functions().getDay(DateTime.now()),
+                hourValueAlarm,
+                minuteValueAlarm),
             alarmID[count],
             fireAlarm,
             wakeup: true,
@@ -107,8 +66,12 @@ class _alarmPageState extends State<alarmPage> {
         alarmHour.add(hourValueAlarm);
         alarmMinute.add(minuteValueAlarm);
         AndroidAlarmManager.oneShotAt(
-            DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
-                getDay(DateTime.now()) + 1, hourValueAlarm, minuteValueAlarm),
+            DateTime(
+                functions().getYear(DateTime.now()),
+                functions().getMonth(DateTime.now()),
+                functions().getDay(DateTime.now()) + 1,
+                hourValueAlarm,
+                minuteValueAlarm),
             alarmID[count],
             fireAlarm,
             wakeup: true,
@@ -121,8 +84,12 @@ class _alarmPageState extends State<alarmPage> {
       alarmHour.add(hourValueAlarm);
       alarmMinute.add(minuteValueAlarm);
       AndroidAlarmManager.oneShotAt(
-          DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
-              getDay(DateTime.now()) + 1, hourValueAlarm, minuteValueAlarm),
+          DateTime(
+              functions().getYear(DateTime.now()),
+              functions().getMonth(DateTime.now()),
+              functions().getDay(DateTime.now()) + 1,
+              hourValueAlarm,
+              minuteValueAlarm),
           alarmID[count],
           fireAlarm,
           wakeup: true,
@@ -139,6 +106,12 @@ class _alarmPageState extends State<alarmPage> {
     AndroidAlarmManager.cancel(alarmID[selectedAlarmId]);
     alarmID.removeAt(selectedAlarmId);
     count--;
+  }
+
+  static void fireAlarm() {
+    createAlarmNotifications();
+    WatchAppState().startRingtone();
+    print("Alarm fired");
   }
 
   String _printDurationHHMM(Duration duration) {
@@ -300,19 +273,11 @@ class _alarmPageState extends State<alarmPage> {
   }
 }
 
-void fireAlarm() {
-  createAlarmNotifications();
-  print("Alarm fired");
-}
-
-void stopRingtone() {
-  FlutterRingtonePlayer.stop();
-}
-
 void stopAlarm() {
   AndroidAlarmManager.cancel(alarmID[selectedAlarmId]);
 }
 
+/*
 void activateAlarm() {
   if (hourValueAlarm >= getHour(DateTime.now())) {
     if (minuteValueAlarm > getMinute(DateTime.now())) {
@@ -323,7 +288,7 @@ void activateAlarm() {
           DateTime(getYear(DateTime.now()), getMonth(DateTime.now()),
               getDay(DateTime.now()), hourValueAlarm, minuteValueAlarm),
           alarmID[count],
-          fireAlarm,
+          alarmPageState().fireAlarm(),
           wakeup: true,
           allowWhileIdle: true,
           rescheduleOnReboot: true);
@@ -356,4 +321,6 @@ void activateAlarm() {
         rescheduleOnReboot: true);
     print("alarm setted");
   }
+  
 }
+*/
