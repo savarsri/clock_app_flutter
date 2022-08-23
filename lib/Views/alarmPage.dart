@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:watch_app/Functions/functions.dart';
 import 'package:watch_app/Functions/notifications.dart';
-import 'package:watch_app/home.dart';
+import 'package:watch_app/Views/watchAlarm.dart';
 
 class alarmPage extends StatefulWidget {
-  const alarmPage({key});
+  alarmPage({Key? key}) : super(key: key);
 
   @override
   State<alarmPage> createState() => alarmPageState();
@@ -39,9 +39,11 @@ class alarmPageState extends State<alarmPage> {
   void setAlarm() {
     int tempTime = hourValueAlarm * 60 * 60 + minuteValueAlarm * 60;
     if (hourValueAlarm / 12 < 1) {
-      alarmTime.add(_printDurationHHMM(Duration(seconds: tempTime)) + " am");
+      alarmTime.add(
+          functions().printDurationHHMM(Duration(seconds: tempTime)) + " am");
     } else {
-      alarmTime.add(_printDurationHHMM(Duration(seconds: tempTime)) + " pm");
+      alarmTime.add(
+          functions().printDurationHHMM(Duration(seconds: tempTime)) + " pm");
     }
     if (hourValueAlarm >= functions().getHour(DateTime.now())) {
       if (minuteValueAlarm > functions().getMinute(DateTime.now())) {
@@ -109,19 +111,9 @@ class alarmPageState extends State<alarmPage> {
   }
 
   static void fireAlarm() {
+    //functions().playAlarmRingtone();
     createAlarmNotifications();
-    WatchAppState().startRingtone();
     print("Alarm fired");
-  }
-
-  String _printDurationHHMM(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    if (int.parse(twoDigits(duration.inHours)) / 12 >= 0) {
-      return "${(int.parse(twoDigits(duration.inHours)) % 12).toString()}:$twoDigitMinutes";
-    } else {
-      return "${twoDigits(duration.inHours)}:$twoDigitMinutes";
-    }
   }
 
   @override
@@ -141,7 +133,7 @@ class alarmPageState extends State<alarmPage> {
           IconButton(
               onPressed: () {
                 setAlarm();
-                Navigator.maybePop(context);
+                //Navigator.pop(context);
               },
               icon: Icon(Icons.check))
         ],
@@ -271,10 +263,6 @@ class alarmPageState extends State<alarmPage> {
       ),
     );
   }
-}
-
-void stopAlarm() {
-  AndroidAlarmManager.cancel(alarmID[selectedAlarmId]);
 }
 
 /*

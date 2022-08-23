@@ -49,7 +49,7 @@ class MyApp extends StatelessWidget {
       title: "Clock",
       theme: ThemeData.dark(),
       debugShowCheckedModeBanner: false,
-      home: WatchApp(),
+      home: homePage(),
     );
   }
 }
