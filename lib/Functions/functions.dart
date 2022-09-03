@@ -59,7 +59,7 @@ class functions {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
     if (int.parse(twoDigits(duration.inHours)) / 12 >= 0) {
-      return "${(int.parse(twoDigits(duration.inHours)) % 12).toString()}:$twoDigitMinutes";
+      return "${twoDigits((int.parse(twoDigits(duration.inHours)) % 12))}:$twoDigitMinutes";
     } else {
       return "${twoDigits(duration.inHours)}:$twoDigitMinutes";
     }
