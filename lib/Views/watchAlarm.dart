@@ -124,6 +124,15 @@ class watchAlarmState extends State<watchAlarm> {
                   ),
                 ),
               ),
+              Padding(
+                padding: EdgeInsetsDirectional.only(top: height * 0.01),
+                child: SizedBox(
+                  height: height * 0.0038,
+                  child: Container(
+                    color: Colors.black,
+                  ),
+                ),
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,

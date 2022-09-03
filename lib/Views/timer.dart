@@ -270,7 +270,7 @@ class _watchTimerState extends State<watchTimer> {
             Padding(
               padding: EdgeInsetsDirectional.only(top: height * 0.03),
               child: SizedBox(
-                height: height * 0.15,
+                height: height * 0.185,
                 child: Container(
                   color: Colors.black,
                 ),
