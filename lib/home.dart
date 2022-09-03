@@ -1,12 +1,7 @@
 // ignore_for_file: prefer_const_constructors
-import 'dart:isolate';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
-import 'package:intl/intl.dart';
-import 'dart:async';
 import 'package:watch_app/Functions/functions.dart';
-import 'package:watch_app/Views/alarmPage.dart';
 import 'package:watch_app/Views/stopwatch.dart';
 import 'package:watch_app/Views/timer.dart';
 import 'package:watch_app/Views/watchAlarm.dart';
@@ -32,8 +27,9 @@ class homePageState extends State<homePage> {
           print('Timer');
         });
       } else if (event.channelKey == "Alarm Notification") {
-        FlutterRingtonePlayer.stop;
-        functions().stopAlarmRingtone();
+        setState(() {
+          functions().stopAlarmRingtone();
+        });
       }
     });
 
@@ -44,8 +40,9 @@ class homePageState extends State<homePage> {
           print('Timer');
         });
       } else if (event.channelKey == "Alarm Notification") {
-        FlutterRingtonePlayer.stop;
-        functions().stopAlarmRingtone();
+        setState(() {
+          functions().stopAlarmRingtone();
+        });
       }
     }));
   }

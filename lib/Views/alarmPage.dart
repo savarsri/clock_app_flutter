@@ -111,7 +111,7 @@ class alarmPageState extends State<alarmPage> {
   }
 
   static void fireAlarm() {
-    //functions().playAlarmRingtone();
+    functions().playAlarmRingtone();
     createAlarmNotifications();
     print("Alarm fired");
   }
@@ -133,7 +133,7 @@ class alarmPageState extends State<alarmPage> {
           IconButton(
               onPressed: () {
                 setAlarm();
-                //Navigator.pop(context);
+                Navigator.pop(context);
               },
               icon: Icon(Icons.check))
         ],

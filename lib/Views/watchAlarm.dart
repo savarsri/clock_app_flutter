@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:intl/intl.dart';
 import 'package:watch_app/Functions/functions.dart';
-import 'package:watch_app/Views/alarmPage.dart';
-import '../Functions/notifications.dart';
+
+import 'alarmPage.dart';
 
 class watchAlarm extends StatefulWidget {
   watchAlarm({Key? key}) : super(key: key);
@@ -19,11 +17,6 @@ String _date = ("Date: " + DateFormat("dd/MM/yyyy").format(DateTime.now()));
 late int selectedAlarmId;
 late Timer _timerClock;
 bool switchBool = true, onTapBool = false;
-
-void stopAlarm() {
-  functions().stopAlarmRingtone();
-  FlutterRingtonePlayer.stop();
-}
 
 class watchAlarmState extends State<watchAlarm> {
   @override
@@ -45,21 +38,6 @@ class watchAlarmState extends State<watchAlarm> {
       _time = DateFormat("hh:mm:ss a").format(DateTime.now());
     });
   }
-
-/*
-  void alarmSet() {
-    AndroidAlarmManager.oneShotAt(
-        DateTime(
-            functions().getYear(DateTime.now()),
-            functions().getMonth(DateTime.now()),
-            functions().getDay(DateTime.now()),
-            functions().getHour(DateTime.now()),
-            functions().getMinute(DateTime.now()) + 1),
-        0,
-        fireAlarm);
-    print("Alarm set");
-  }
-  */
 
   @override
   Widget build(BuildContext context) {
