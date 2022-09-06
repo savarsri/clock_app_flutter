@@ -28,7 +28,9 @@ class homePageState extends State<homePage> {
         });
       } else if (event.channelKey == "Alarm Notification") {
         setState(() {
+          watchAlarmState().stopAlarmRingtone;
           functions().stopAlarmRingtone();
+          print('Alarm');
         });
       }
     });
@@ -41,7 +43,8 @@ class homePageState extends State<homePage> {
         });
       } else if (event.channelKey == "Alarm Notification") {
         setState(() {
-          functions().stopAlarmRingtone();
+          watchAlarmState().stopAlarmRingtone;
+          print('Alarm');
         });
       }
     }));
